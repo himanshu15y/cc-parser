@@ -543,6 +543,17 @@ def _extract_hsbc_transactions(
                     normalize_token(str(item.get("text", "")).strip())
                     for item in next_line_words
                 ]
+                # A skewed scan (OCR text layer) can put the card/member header
+                # between a transaction's date and its narration. Consume that
+                # header here so the narration line after it is merged instead.
+                header_match = _HSBC_CARD_RE.search(clean_space(" ".join(next_tokens)))
+                if header_match and line_index + 2 < len(lines):
+                    current_card = _normalize_hsbc_card(header_match.group(0))
+                    next_tokens = [
+                        normalize_token(str(item.get("text", "")).strip())
+                        for item in lines[line_index + 2]
+                    ]
+                    detail_line_index += 1
                 # Only merge if the next line does NOT start with a DDMMM date
                 if (
                     next_tokens
